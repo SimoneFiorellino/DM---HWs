@@ -1,0 +1,97 @@
+// 1 - Return the average of links in a post in the top 100 most viewed posts:
+
+call {
+    match (p1:post)
+    where p1.ViewCount is not null
+    return p1
+    order by p1.ViewCount desc limit 100     
+} 
+with p1
+match (p1)-[r: has_link]->()
+RETURN toFloat(count(r)/100.0) as average;
+
+// 2 - Return the most viewed posts of the user with max(reputation) ordered by the “ViewCount”
+
+call {
+    match (u1:user)
+    return u1
+    order by u1.Reputation desc limit 1  
+} 
+with u1
+match (u1)-[r: is_owner]->(p) 
+where p.ViewCount is not null
+RETURN p
+order by p.ViewCount desc
+limit 1;
+
+// 3 - For every user, return the DisplayName and his last post.
+
+MATCH (u:user)-[r:is_owner]->(p:post)
+RETURN DISTINCT u.DisplayName, max(p.CreationDate) as DateLastPost;
+
+// 5 - Return the post with most interactions with “math” in the Title
+
+MATCH (p:post)
+WHERE p.Title CONTAINS 'math' 
+RETURN p.Title, (p.AnswerCount + p.CommentCount) AS sum
+ORDER BY sum DESC limit 1;
+
+// 6 - Return the users that obtained at least one badge “Popular Question” and have a reputation greater than the average.
+
+call {match (u:user) return avg(u.Reputation) as rep_avg} with rep_avg
+call{
+    match (u:user)-[r:achieved]->(b:badge)
+    where b.Name = "Popular Question"
+    return distinct u
+} with u
+where u.Reputation >= rep_avg
+return u limit 10;
+
+// 7 - Users “beta tester” with an age greater than 40 that have commented. Given these users we want to know their locations. How many users we have in these locations?
+
+call{
+    match (u:user)-[r:achieved]->(b:badge)
+    where b.Name = "Great Answer" and u.Reputation > 10000
+    return distinct u.Location as locations
+} with locations
+match (u:user)
+where u.Location = locations
+return count(distinct u);
+
+// 8 - Count the number of badges of the users with positive sentiment, e.g. u.UpVotes - u.DownVotes 
+
+call{
+    match (u:user)
+    where (u.UpVotes - u.DownVotes) > 0
+    return u
+} with u
+match (u)-[r:achieved]->()
+return count(r);
+
+// 9 - Avg age (”reputation”) of the “beta tester” ("Great Answer") users who have commented, these users have a positive “sentiment”.
+
+match (u:user)-[r:achieved]->(b:badge), (u)-[:commented]->()
+where b.Name = "Great Answer" and (u.UpVotes - u.DownVotes) > 0
+return avg(u.Reputation);
+
+// 10 - How many badges have the most popular StackExchange users (Owner) in March 2013, in terms of comments and answers
+
+call{
+  match (u:user)-[r:is_owner]->(p:post)
+    where p.CreationDate>localdatetime({year:2013, month:3}) and p.CreationDate<localdatetime({year:2013, month:4})
+    return u 
+    order by (p.CommentCount+p.AnswerCount) desc limit 1  
+} with u
+match (u)-[r:achieved]->()
+return count(r);
+
+// 12 - Return the users that are owners at least of one post, with a reputation bigger than 1000, and have commented on at least one post with a score bigger than 1000.
+
+call{
+    match (u:user)-[r:is_owner]->()
+    where u.Reputation > 1000
+    return distinct u
+} with u
+match (u)-[r:commented]->(p:post)
+where p.Score>1000
+return u;

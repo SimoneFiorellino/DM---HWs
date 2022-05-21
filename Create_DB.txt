@@ -142,13 +142,13 @@ remove p.ParentId;
 match (p:post)
 remove p.Tags;
 
-match (b:badge)
-remove b.UserId;
-
 match (l:link)
 remove l.PostId;
 
 MATCH (n: comment)
+DETACH DELETE n;
+
+MATCH (n: full_badge)
 DETACH DELETE n;
 
 //match (p:post)
