@@ -56,12 +56,8 @@ return count(distinct u);
 
 // 8 - Count the number of badges of the users with positive sentiment, i.e. u.UpVotes - u.DownVotes 
 
-call{
-    match (u:user)
-    where (u.UpVotes - u.DownVotes) > 0
-    return u
-} with u
-match (u)-[r:achieved]->()
+match (u:user)-[r:achieved]->()
+where (u.UpVotes - u.DownVotes) > 0
 return count(r);
 
 // 9 - Avg age (”reputation”) of the “beta tester” ("Great Answer") users who have commented, these users have a positive “sentiment”.
