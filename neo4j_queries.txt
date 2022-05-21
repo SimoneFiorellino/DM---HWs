@@ -39,13 +39,9 @@ ORDER BY interactions DESC limit 1;
 // 6 - Return the users that obtained at least one badge “Popular Question” and have a reputation greater than the average.
 
 call {match (u:user) return avg(u.Reputation) as rep_avg} with rep_avg
-call{
-    match (u:user)-[r:achieved]->(b:badge)
-    where b.Name = "Popular Question"
-    return distinct u
-} with u
-where u.Reputation >= rep_avg
-return u;
+match (u:user)-[r:achieved]->(b:badge)
+where b.Name = "Popular Question" and u.Reputation >= rep_avg
+return distinct u
 
 // 7 - Users “beta tester” with an age greater than 40 (u.Reputation > 10000) that have commented. Given these users we want to know their locations. How many users we have in these locations?
 
