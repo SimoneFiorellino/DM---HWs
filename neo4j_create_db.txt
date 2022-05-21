@@ -1,0 +1,160 @@
+// Nodes
+
+// Posts
+CALL apoc.load.xml("file:///Posts.xml")
+YIELD value
+UNWIND value._children as posts
+create (p: post{
+		Title: posts.Title,
+		pid: toInteger(posts.Id),
+		ViewCount: toInteger(posts.ViewCount),
+		CreationDate: localdatetime(posts.CreationDate),
+		AnswerCount: toInteger(posts.AnswerCount),
+		CommentCount: toInteger(posts.CommentCount),
+		OwnerUserId: toInteger(posts.OwnerUserId),
+		OwnerDisplayName: posts.OwnerDisplayName,
+		ParentId: toInteger(posts.ParentId),
+		Tags: posts.Tags,
+		Score: toInteger(posts.Score)
+})
+return p;
+
+// Users
+CALL apoc.load.xml("file:///Users.xml")
+YIELD value
+UNWIND value._children as users
+create (u: user{
+		DisplayName: users.DisplayName,
+    uid: toInteger(users.Id),
+		Reputation: toInteger(users.Reputation),
+		Location: users.Location,
+		UpVotes: toInteger(users.UpVotes),
+		DownVotes: toInteger(users.DownVotes),
+		Age: toInteger(users.Age)
+})
+return u;
+
+// Badges
+CALL apoc.load.xml("file:///Badges.xml")
+YIELD value
+UNWIND value._children as badges
+create (b: full_badge{
+    bid: toInteger(badges.Id),
+    UserId: toInteger(badges.UserId),
+    Name: badges.Name,
+    Date: localdatetime(badges.Date)
+})
+return b;
+
+CALL apoc.load.xml("file:///Badges.xml")
+YIELD value
+UNWIND value._children as badges
+create (b: badge{
+    Name: badges.Name
+})
+return b;
+
+MATCH (b:badge) 
+WITH b.Name as name, collect(b) AS nodes 
+WHERE size(nodes) >  1
+FOREACH (b in tail(nodes) | DELETE b);
+
+// Tags
+CALL apoc.load.xml("file:///Tags.xml")
+YIELD value
+UNWIND value._children as tags
+create (t: tag{
+    tid: toInteger(tags.Id),
+		TagName: tags.TagName
+})
+return t;
+
+// Links
+CALL apoc.load.xml("file:///PostLinks.xml")
+YIELD value
+UNWIND value._children as links
+create (l: link{
+    lid: toInteger(links.Id),
+		PostId: toInteger(links.PostId)
+})
+return l;
+
+// Relations
+
+// user is owner of a post
+match (u:user), (p:post)
+where u.uid = p.OwnerUserId
+create (u)-[r: is_owner]->(p);
+
+// post is parent of a post
+match (a:post), (b:post)
+where a.pid = b.ParentId
+create (a)-[r: is_parent]->(b);
+
+// create support comment nodes
+CALL apoc.load.xml("file:///Comments.xml")
+YIELD value
+UNWIND value._children as comments
+create (c: comment{
+    cid: toInteger(comments.Id),
+		PostId: toInteger(comments.PostId),
+		Text: comments.Text,
+		Score: toInteger(comments.Score),
+		CreationDate: localdatetime(comments.CreationDate),
+		UserId: toInteger(comments.UserId),
+		UserDisplayName: comments.UserDisplayName 
+});
+
+// users comments posts
+match (c:comment), (p:post), (u:user)
+where c.PostId = p.pid and c.UserId = u.uid
+create (u)-[r: commented{
+	Text: c.Text,
+	Score: c.Score,
+	CreationDate: c.CreationDate
+}]->(p);
+
+// user achieved a badge
+match (fb:full_badge), (b:badge), (u:user)
+where b.Name = fb.Name and u.uid = fb.UserId
+create (u)-[r: achieved{
+	Date: fb.Date
+}]->(b);
+
+// post has tags
+match (p:post),(t:tag)
+where p.Tags contains t.TagName 
+create (p)-[r:has_tag]->(t);
+
+// link has post
+match (l:link),(p:post)
+where p.pid = l.PostId
+create (p)-[r:has_link]->(l);
+
+// Deleting useless nodes
+
+match (p:post)
+remove p.OwnerUserId ;
+
+match (p:post)
+remove p.ParentId;
+
+match (p:post)
+remove p.Tags;
+
+match (l:link)
+remove l.PostId;
+
+MATCH (n: comment)
+DETACH DELETE n;
+
+MATCH (n: full_badge)
+DETACH DELETE n;
+
+//match (p:post)
+//where p.Title is null or p.AnswerCount is null or p.CommentCount is null
+//DETACH delete p;
+
+//match (u:user)
+//where u.Location is null or u.DisplayName is null
+//detach delete u;
