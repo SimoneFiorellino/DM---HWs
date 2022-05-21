@@ -133,8 +133,8 @@ create (p)-[r:has_link]->(l);
 
 // Deleting useless nodes
 
-// match (p:post)
-// remove p.OwnerUserId ;
+match (p:post)
+remove p.OwnerUserId ;
 
 match (p:post)
 remove p.ParentId;
