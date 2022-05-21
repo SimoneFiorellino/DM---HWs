@@ -33,8 +33,8 @@ RETURN DISTINCT u.DisplayName, max(p.CreationDate) as DateLastPost;
 
 MATCH (p:post)
 WHERE p.Title CONTAINS 'math' 
-RETURN p.Title, (p.AnswerCount + p.CommentCount) AS sum
-ORDER BY sum DESC limit 1;
+RETURN p, (p.AnswerCount + p.CommentCount) AS interactions
+ORDER BY interactions DESC limit 1;
 
 // 6 - Return the users that obtained at least one badge “Popular Question” and have a reputation greater than the average.
 
@@ -45,9 +45,9 @@ call{
     return distinct u
 } with u
 where u.Reputation >= rep_avg
-return u limit 10;
+return u;
 
-// 7 - Users “beta tester” with an age greater than 40 that have commented. Given these users we want to know their locations. How many users we have in these locations?
+// 7 - Users “beta tester” with an age greater than 40 (u.Reputation > 10000) that have commented. Given these users we want to know their locations. How many users we have in these locations?
 
 call{
     match (u:user)-[r:achieved]->(b:badge)
@@ -58,7 +58,7 @@ match (u:user)
 where u.Location = locations
 return count(distinct u);
 
-// 8 - Count the number of badges of the users with positive sentiment, e.g. u.UpVotes - u.DownVotes 
+// 8 - Count the number of badges of the users with positive sentiment, i.e. u.UpVotes - u.DownVotes 
 
 call{
     match (u:user)
